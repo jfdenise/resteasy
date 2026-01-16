@@ -92,6 +92,7 @@ import org.jboss.resteasy.spi.HeaderValueProcessor;
 import org.jboss.resteasy.spi.HttpRequest;
 import org.jboss.resteasy.spi.HttpResponse;
 import org.jboss.resteasy.spi.InjectorFactory;
+import org.jboss.resteasy.spi.InstanceCreatorHolder;
 import org.jboss.resteasy.spi.LinkHeader;
 import org.jboss.resteasy.spi.PriorityServiceLoader;
 import org.jboss.resteasy.spi.PropertyInjector;
@@ -1309,7 +1310,8 @@ public class ResteasyProviderFactoryImpl extends ResteasyProviderFactory
      * @return instance of type T
      */
     public <T> T injectedInstance(Class<? extends T> clazz) {
-        Constructor<?> constructor = PickConstructor.pickSingletonConstructor(clazz);
+        Constructor[] constructors = InstanceCreatorHolder.getCreator().getConstructors(clazz);
+        Constructor<?> constructor = PickConstructor.pickSingletonConstructor(clazz, constructors);
         ConstructorInjector constructorInjector = getInjectorFactory().createConstructor(constructor, this);
         Object obj = constructorInjector.construct(false);
         PropertyInjector propertyInjector = getInjectorFactory().createPropertyInjector(clazz, this);

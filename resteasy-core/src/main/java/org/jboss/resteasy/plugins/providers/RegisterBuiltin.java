@@ -21,6 +21,7 @@ import jakarta.ws.rs.RuntimeType;
 import jakarta.ws.rs.ext.Providers;
 
 import org.jboss.resteasy.core.ThreadLocalResteasyProviderFactory;
+import org.jboss.resteasy.core.graal.GraalSetup;
 import org.jboss.resteasy.core.providerfactory.ResteasyProviderFactoryImpl;
 import org.jboss.resteasy.plugins.interceptors.GZIPDecodingInterceptor;
 import org.jboss.resteasy.plugins.interceptors.GZIPEncodingInterceptor;
@@ -84,12 +85,16 @@ public class RegisterBuiltin {
     }
 
     public static void registerProviders(ResteasyProviderFactory factory, Set<String> disabledProviders) throws Exception {
+        if (GraalSetup.isRuntime()) {
+            return;
+        }
         Map<String, URL> origins = scanBuiltins(disabledProviders);
         for (final Entry<String, URL> entry : origins.entrySet()) {
             final String line = entry.getKey();
             try {
                 Class<?> clazz;
                 if (System.getSecurityManager() == null) {
+                    System.out.println("PROVIDER " + line);
                     clazz = Thread.currentThread().getContextClassLoader().loadClass(line);
                 } else {
                     clazz = AccessController.doPrivileged(new PrivilegedExceptionAction<Class<?>>() {

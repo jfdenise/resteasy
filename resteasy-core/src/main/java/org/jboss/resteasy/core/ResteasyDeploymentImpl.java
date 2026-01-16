@@ -20,6 +20,7 @@ import jakarta.ws.rs.core.FeatureContext;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.ext.Providers;
 
+import org.jboss.resteasy.core.graal.GraalSetup;
 import org.jboss.resteasy.core.providerfactory.ResteasyProviderFactoryImpl;
 import org.jboss.resteasy.plugins.interceptors.RoleBasedSecurityFeature;
 import org.jboss.resteasy.plugins.providers.JaxrsServerFormUrlEncodedProvider;
@@ -50,6 +51,7 @@ import org.jboss.resteasy.util.GetRestful;
  * @version $Revision: 1 $
  */
 public class ResteasyDeploymentImpl implements ResteasyDeployment {
+    private static final String PROVIDER_FACTORY_KEY = ResteasyDeploymentImpl.class.getName() + ".providerFactory";
     protected boolean widerRequestMatching;
     protected boolean useContainerFormParams = false;
     protected boolean deploymentSensitiveFactoryEnabled = false;
@@ -132,6 +134,7 @@ public class ResteasyDeploymentImpl implements ResteasyDeployment {
     }
 
     private void startInternal() {
+        System.out.println("INITERNAL INT!!!!!!!!!!");
         initializeFactory();
         initializeDispatcher();
         pushContext();
@@ -160,10 +163,11 @@ public class ResteasyDeploymentImpl implements ResteasyDeployment {
             }
 
             // register all providers
-            registration();
-
-            registerMappers();
-            ((ResteasyProviderFactoryImpl) providerFactory).lockSnapshots();
+            if (!GraalSetup.isRuntime()) {
+                registration();
+                registerMappers();
+                ((ResteasyProviderFactoryImpl) providerFactory).lockSnapshots();
+            }
         } finally {
             ResteasyContext.removeContextDataLevel();
         }
@@ -296,10 +300,20 @@ public class ResteasyDeploymentImpl implements ResteasyDeployment {
                 (ResteasyConfiguration) context);
         // it is very important that each deployment create their own provider factory
         // this allows each WAR to have their own set of providers
-        if (providerFactory == null)
-            providerFactory = new ResteasyProviderFactoryImpl(defaultExceptionManagerEnabled);
-        providerFactory.setRegisterBuiltins(registerBuiltin);
-        providerFactory.getStatisticsController().setEnabled(statisticsEnabled);
+        if (providerFactory == null) {
+            if (GraalSetup.isRuntime()) {
+                providerFactory = (ResteasyProviderFactory) GraalSetup.getFromCache(PROVIDER_FACTORY_KEY);
+            } else {
+                providerFactory = new ResteasyProviderFactoryImpl(defaultExceptionManagerEnabled);
+                if (GraalSetup.isBuildTime()) {
+                    GraalSetup.addToCache(PROVIDER_FACTORY_KEY, providerFactory);
+                }
+            }
+        }
+        if (!GraalSetup.isRuntime()) {
+            providerFactory.setRegisterBuiltins(registerBuiltin);
+            providerFactory.getStatisticsController().setEnabled(statisticsEnabled);
+        }
 
         Object tracingText;
         Object thresholdText;
@@ -309,32 +323,33 @@ public class ResteasyDeploymentImpl implements ResteasyDeployment {
         tracingText = config.getOptionalValue(ResteasyContextParameters.RESTEASY_TRACING_TYPE, String.class).orElse(null);
         thresholdText = config.getOptionalValue(ResteasyContextParameters.RESTEASY_TRACING_THRESHOLD, String.class)
                 .orElse(null);
+        if (!GraalSetup.isRuntime()) {
+            if (tracingText != null) {
+                providerFactory.property(ResteasyContextParameters.RESTEASY_TRACING_TYPE, tracingText);
+            } else {
+                if (context != null) {
+                    tracingText = ((ResteasyConfiguration) context)
+                            .getParameter(ResteasyContextParameters.RESTEASY_TRACING_TYPE);
+                    if (tracingText != null) {
+                        providerFactory.property(ResteasyContextParameters.RESTEASY_TRACING_TYPE, tracingText);
+                    }
+                }
+            }
 
-        if (tracingText != null) {
-            providerFactory.property(ResteasyContextParameters.RESTEASY_TRACING_TYPE, tracingText);
-        } else {
-            if (context != null) {
-                tracingText = ((ResteasyConfiguration) context).getParameter(ResteasyContextParameters.RESTEASY_TRACING_TYPE);
-                if (tracingText != null) {
-                    providerFactory.property(ResteasyContextParameters.RESTEASY_TRACING_TYPE, tracingText);
+            if (thresholdText != null) {
+                providerFactory.getMutableProperties().put(ResteasyContextParameters.RESTEASY_TRACING_THRESHOLD, thresholdText);
+            } else {
+
+                if (context != null) {
+                    thresholdText = ((ResteasyConfiguration) context)
+                            .getInitParameter(ResteasyContextParameters.RESTEASY_TRACING_THRESHOLD);
+                    if (thresholdText != null) {
+                        providerFactory.getMutableProperties().put(ResteasyContextParameters.RESTEASY_TRACING_THRESHOLD,
+                                thresholdText);
+                    }
                 }
             }
         }
-
-        if (thresholdText != null) {
-            providerFactory.getMutableProperties().put(ResteasyContextParameters.RESTEASY_TRACING_THRESHOLD, thresholdText);
-        } else {
-
-            if (context != null) {
-                thresholdText = ((ResteasyConfiguration) context)
-                        .getInitParameter(ResteasyContextParameters.RESTEASY_TRACING_THRESHOLD);
-                if (thresholdText != null) {
-                    providerFactory.getMutableProperties().put(ResteasyContextParameters.RESTEASY_TRACING_THRESHOLD,
-                            thresholdText);
-                }
-            }
-        }
-
         if (deploymentSensitiveFactoryEnabled) {
             // the ThreadLocalResteasyProviderFactory pushes and pops this deployments parentProviderFactory
             // on a ThreadLocal stack.  This allows each application/WAR to have their own parentProviderFactory
@@ -489,6 +504,7 @@ public class ResteasyDeploymentImpl implements ResteasyDeployment {
                 } catch (ClassNotFoundException e) {
                     throw new RuntimeException(e);
                 }
+                System.out.println("!!!!!!!!!!!! SCANNING CLASS ADDING TO REGISTRY " + resource);
                 registry.addPerRequestResource(clazz);
             }
         }

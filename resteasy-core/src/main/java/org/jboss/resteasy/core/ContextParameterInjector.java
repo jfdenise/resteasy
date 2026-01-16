@@ -21,6 +21,7 @@ import jakarta.ws.rs.ext.Providers;
 import jakarta.ws.rs.sse.Sse;
 import jakarta.ws.rs.sse.SseEventSink;
 
+import org.jboss.resteasy.core.graal.GraalSetup;
 import org.jboss.resteasy.plugins.providers.sse.SseImpl;
 import org.jboss.resteasy.plugins.server.servlet.ResteasyContextParameters;
 import org.jboss.resteasy.resteasy_jaxrs.i18n.Messages;
@@ -46,7 +47,7 @@ public class ContextParameterInjector implements ValueInjector {
     private Type genericType;
     private Annotation[] annotations;
     private volatile boolean outputStreamWasWritten = false;
-
+    private Object proxyInstance;
     static {
         constructor = AccessController.doPrivileged(new PrivilegedAction<Constructor<?>>() {
             @Override
@@ -57,6 +58,7 @@ public class ContextParameterInjector implements ValueInjector {
                     Class<?> clazz = Class.forName("org.jboss.resteasy.core.ContextServletOutputStream");
                     return clazz.getDeclaredConstructor(ContextParameterInjector.class, OutputStream.class);
                 } catch (Exception e) {
+                    System.out.println("CONSTRUCTOR FOR jakarta.servlet.http.HttpServletResponse ERROR " + e);
                     return null;
                 }
             }
@@ -70,6 +72,16 @@ public class ContextParameterInjector implements ValueInjector {
         this.proxy = proxy;
         this.factory = factory;
         this.annotations = annotations;
+        if (GraalSetup.isBuildTime()) {
+            // Having a cache of proxy means that resteasy.proxy.implement.all.interfaces option is not supported with Graal
+            proxyInstance = GraalSetup.getProxyFromCache(rawType);
+            if (proxyInstance == null) {
+                Class[] itfs = new Class[1];
+                itfs[0] = rawType;
+                proxyInstance = Proxy.newProxyInstance(rawType.getClassLoader(), itfs, new GenericDelegatingProxy());
+                GraalSetup.addProxyToCache(rawType, proxyInstance);
+            }
+        }
     }
 
     @Override
@@ -176,6 +188,9 @@ public class ContextParameterInjector implements ValueInjector {
     }
 
     protected Object createProxy() {
+        if (proxyInstance != null) {
+            return proxyInstance;
+        }
         if (proxy != null) {
             try {
                 return proxy.getConstructors()[0].newInstance(new GenericDelegatingProxy());
@@ -208,7 +223,13 @@ public class ContextParameterInjector implements ValueInjector {
                     }
                 });
             }
-            return Proxy.newProxyInstance(clazzLoader, intfs, new GenericDelegatingProxy());
+            System.out.println("CREATE PROXY for " + delegate);
+            for (Class i : intfs) {
+                System.out.println("INTERFACE " + i);
+            }
+            Object obj = Proxy.newProxyInstance(clazzLoader, intfs, new GenericDelegatingProxy());
+            System.out.println("INJECTED PROXY IS " + obj.getClass());
+            return obj;
         }
     }
 

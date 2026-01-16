@@ -25,7 +25,10 @@ public final class PickConstructor {
      * @return constructor
      */
     public static Constructor pickSingletonConstructor(Class clazz) {
-        Constructor<?>[] constructors = clazz.getConstructors();
+        return pickSingletonConstructor(clazz, clazz.getConstructors());
+    }
+
+    public static Constructor pickSingletonConstructor(Class clazz, Constructor[] constructors) {
         Constructor<?> constructor = null;
         // prefer a no-arg constructor
         int numParameters = 0;
@@ -64,6 +67,10 @@ public final class PickConstructor {
         return pick;
     }
 
+    public static Constructor pickPerRequestConstructor(Class clazz) {
+        return pickPerRequestConstructor(clazz, clazz.getConstructors(), clazz.getDeclaredConstructors());
+    }
+
     /**
      * Pick best constructor for a provider or resource class
      * <p>
@@ -72,9 +79,8 @@ public final class PickConstructor {
      * @param clazz class
      * @return constructor
      */
-    public static Constructor pickPerRequestConstructor(Class clazz) {
-        Constructor<?>[] constructors = clazz.getConstructors();
-        Constructor<?>[] declaredConstructors = clazz.getDeclaredConstructors();
+    public static Constructor pickPerRequestConstructor(Class clazz, Constructor<?>[] constructors,
+            Constructor<?>[] declaredConstructors) {
         Constructor<?> constructor = null;
         // prefer a no-arg constructor
         int numParameters = 0;

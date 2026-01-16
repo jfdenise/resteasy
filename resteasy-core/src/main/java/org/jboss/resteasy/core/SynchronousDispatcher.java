@@ -20,6 +20,7 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriInfo;
 import jakarta.ws.rs.ext.Providers;
 
+import org.jboss.resteasy.core.graal.GraalSetup;
 import org.jboss.resteasy.core.interception.jaxrs.PreMatchContainerRequestContext;
 import org.jboss.resteasy.plugins.server.Cleanable;
 import org.jboss.resteasy.plugins.server.Cleanables;
@@ -46,6 +47,7 @@ import org.jboss.resteasy.tracing.RESTEasyTracingLogger;
  * @version $Revision: 1 $
  */
 public class SynchronousDispatcher implements Dispatcher {
+    private static final String REGISTRY_CACHE_KEY = SynchronousDispatcher.class.getName() + ".registry";
     protected ResteasyProviderFactory providerFactory;
     protected Registry registry;
     protected List<HttpRequestPreprocessor> requestPreprocessors = new ArrayList<HttpRequestPreprocessor>();
@@ -65,7 +67,14 @@ public class SynchronousDispatcher implements Dispatcher {
 
     public SynchronousDispatcher(final ResteasyProviderFactory providerFactory) {
         this.providerFactory = providerFactory;
-        this.registry = new ResourceMethodRegistry(providerFactory);
+        if (GraalSetup.isRuntime()) {
+            registry = (Registry) GraalSetup.getFromCache(REGISTRY_CACHE_KEY);
+        } else {
+            this.registry = new ResourceMethodRegistry(providerFactory);
+            if (GraalSetup.isBuildTime()) {
+                GraalSetup.addToCache(REGISTRY_CACHE_KEY, registry);
+            }
+        }
         defaultContextObjects.put(Providers.class, providerFactory);
         defaultContextObjects.put(Registry.class, registry);
         defaultContextObjects.put(Dispatcher.class, this);
@@ -230,7 +239,9 @@ public class SynchronousDispatcher implements Dispatcher {
                 ResourceInvoker invoker = null;
                 try {
                     try {
+                        System.out.println(":INKVOK1");
                         invoker = getInvoker(request);
+                        System.out.println(":INKVOK1 " + invoker);
                     } catch (Exception exception) {
                         //logger.error("getInvoker() failed mapping exception", exception);
                         writeException(request, response, exception, t -> {
@@ -286,6 +297,7 @@ public class SynchronousDispatcher implements Dispatcher {
 
     public ResourceInvoker getInvoker(HttpRequest request)
             throws Failure {
+        System.out.println("GET INVOKER");
         LogMessages.LOGGER.pathInfo(request.getUri().getPath());
         if (!request.isInitial()) {
             throw new InternalServerErrorException(Messages.MESSAGES.isNotInitialRequest(request.getUri().getPath()));
@@ -294,6 +306,7 @@ public class SynchronousDispatcher implements Dispatcher {
         if (invoker == null) {
             throw new NotFoundException(Messages.MESSAGES.unableToFindJaxRsResource(request.getUri().getPath()));
         }
+        System.out.println("GET INVOKER " + invoker);
         RESTEasyTracingLogger logger = RESTEasyTracingLogger.getInstance(request);
         logger.log("MATCH_RESOURCE", invoker);
         logger.log("MATCH_RESOURCE_METHOD", invoker.getMethod());
@@ -327,6 +340,7 @@ public class SynchronousDispatcher implements Dispatcher {
         contextDataMap.putAll(defaultContextObjects);
         contextDataMap.put(Cleanables.class, new Cleanables());
         contextDataMap.put(PostResourceMethodInvokers.class, new PostResourceMethodInvokers());
+        System.out.println("OBJECT PUSED");
     }
 
     public Response internalInvocation(HttpRequest request, HttpResponse response, Object entity) {
@@ -338,8 +352,10 @@ public class SynchronousDispatcher implements Dispatcher {
             MessageBodyParameterInjector.pushBody(entity);
             pushedBody = true;
             ResourceInvoker invoker = getInvoker(request);
+            System.out.println("WE HAVE AN INVOKER " + invoker);
             if (invoker != null) {
                 pushContextObjects(request, response);
+                System.out.println("WILL EXECUTE");
                 return execute(request, response, invoker);
             }
 

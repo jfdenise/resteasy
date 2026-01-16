@@ -144,6 +144,7 @@ public class ServletContainerDispatcher {
     }
 
     protected void processApplication(Application config) {
+        System.out.println("!!!!!!!!!!!!!!!!!!!!! PROCESS APPLICATION " + config.getClass());
         LogMessages.LOGGER.deployingApplication(Application.class.getName(), config.getClass());
         ArrayList<Class> actualResourceClasses = new ArrayList<Class>();
         ArrayList<Class> actualProviderClasses = new ArrayList<Class>();
@@ -192,6 +193,7 @@ public class ServletContainerDispatcher {
             //logger.info("***PATH: " + request.getRequestURL());
             // classloader/deployment aware RestasyProviderFactory.  Used to have request specific
             // ResteasyProviderFactory.getInstance()
+            System.out.println("SERVICE REQUEST");
             ResteasyProviderFactory defaultInstance = ResteasyProviderFactory.getInstance();
             if (defaultInstance instanceof ThreadLocalResteasyProviderFactory) {
                 ThreadLocalResteasyProviderFactory.push(providerFactory);

@@ -39,6 +39,7 @@ import jakarta.ws.rs.ext.RuntimeDelegate.HeaderDelegate;
 import org.jboss.resteasy.annotations.StringParameterUnmarshallerBinder;
 import org.jboss.resteasy.resteasy_jaxrs.i18n.LogMessages;
 import org.jboss.resteasy.resteasy_jaxrs.i18n.Messages;
+import org.jboss.resteasy.spi.InstanceCreatorHolder;
 import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.jboss.resteasy.spi.StringParameterUnmarshaller;
 import org.jboss.resteasy.spi.util.Types;
@@ -707,6 +708,7 @@ public class StringParameterInjector {
         if (isArray) {
             if (values == null)
                 return null;
+            // I suspect that we will be not able to deal this Array. TO BE INVESTIGATED
             Object vals = Array.newInstance(type.getComponentType(), values.size());
             for (int i = 0; i < values.size(); i++)
                 Array.set(vals, i, extractValue(values.get(i)));
@@ -717,7 +719,7 @@ public class StringParameterInjector {
             @SuppressWarnings("rawtypes")
             Collection collection = null;
             try {
-                collection = collectionType.newInstance();
+                collection = InstanceCreatorHolder.getCreator().newInstance(collectionType);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

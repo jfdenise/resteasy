@@ -21,6 +21,7 @@ import org.jboss.resteasy.specimpl.VariantListBuilderImpl;
 import org.jboss.resteasy.spi.ConstructorInjector;
 import org.jboss.resteasy.spi.HttpRequest;
 import org.jboss.resteasy.spi.HttpResponse;
+import org.jboss.resteasy.spi.InstanceCreatorHolder;
 import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.jboss.resteasy.spi.util.PickConstructor;
 
@@ -102,7 +103,8 @@ public final class Utils {
     }
 
     private static <T> ConstructorInjector createConstructorInjector(ResteasyProviderFactory rpf, Class<? extends T> clazz) {
-        Constructor<?> constructor = PickConstructor.pickSingletonConstructor(clazz);
+        Constructor[] constructors = InstanceCreatorHolder.getCreator().getConstructors(clazz);
+        Constructor<?> constructor = PickConstructor.pickSingletonConstructor(clazz, constructors);
         if (constructor == null) {
             throw new IllegalArgumentException(
                     Messages.MESSAGES.unableToFindPublicConstructorForProvider(clazz.getName()));

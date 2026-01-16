@@ -12,6 +12,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import org.jboss.resteasy.core.ResteasyContext;
 import org.jboss.resteasy.core.SynchronousDispatcher;
+import org.jboss.resteasy.core.graal.GraalSetup;
 import org.jboss.resteasy.specimpl.ResteasyHttpHeaders;
 import org.jboss.resteasy.specimpl.ResteasyUriInfo;
 import org.jboss.resteasy.spi.Dispatcher;
@@ -34,6 +35,7 @@ public class HttpServletDispatcher extends HttpServlet implements HttpRequestFac
         Map<Class<?>, Object> map = ResteasyContext.getContextDataMap();
         map.put(ServletContext.class, servletConfig.getServletContext());
         map.put(ServletConfig.class, servletConfig);
+        GraalSetup.addServlet(servletConfig);
         servletContainerDispatcher = new ServletContainerDispatcher(servletConfig);
         ServletBootstrap bootstrap = new ServletBootstrap(servletConfig);
         servletContainerDispatcher.init(servletConfig.getServletContext(), bootstrap, this, this);
