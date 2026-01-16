@@ -21,6 +21,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.jboss.resteasy.jsapi.i18n.LogMessages;
 import org.jboss.resteasy.jsapi.i18n.Messages;
 import org.jboss.resteasy.util.PathHelper;
+import org.wildfly.graal.runtime.WildFlyGraalSetup;
 
 /**
  * @author <a href="mailto:stef@epardaud.fr">Stéphane Épardaud</a>
@@ -28,6 +29,22 @@ import org.jboss.resteasy.util.PathHelper;
 public class JSAPIWriter {
 
     private static final long serialVersionUID = -1985015444704126795L;
+    private static final String CLIENT_SCRIPT = "/resteasy-client.js";
+    static {
+        try {
+            if (WildFlyGraalSetup.isBuildTime()) {
+                StringWriter stringWriter = new StringWriter();
+                try (PrintWriter writer = new PrintWriter(new BufferedWriter(stringWriter))) {
+                    copyResource(CLIENT_SCRIPT, writer);
+                    writer.flush();
+                }
+                WildFlyGraalSetup.GraalCache cache = WildFlyGraalSetup.initCache(JSAPIWriter.class.getName());
+                cache.add(CLIENT_SCRIPT, stringWriter.toString());
+            }
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
 
     public void writeJavaScript(String base, HttpServletRequest req, HttpServletResponse resp,
             Map<String, ServiceRegistry> serviceRegistries) throws IOException {
@@ -153,16 +170,22 @@ public class JSAPIWriter {
 
     }
 
-    private void copyResource(String name, PrintWriter writer)
+    private static void copyResource(String name, PrintWriter writer)
             throws IOException {
-        Reader reader = new InputStreamReader(getClass()
-                .getResourceAsStream(name));
-        char[] array = new char[1024];
-        int read;
-        while ((read = reader.read(array)) >= 0) {
-            writer.write(array, 0, read);
+        if (WildFlyGraalSetup.isRuntime()) {
+            WildFlyGraalSetup.GraalCache cache = WildFlyGraalSetup.getCache(JSAPIWriter.class.getName());
+            String content = (String) cache.get(name);
+            writer.write(content);
+        } else {
+            Reader reader = new InputStreamReader(JSAPIWriter.class
+                    .getResourceAsStream(name));
+            char[] array = new char[1024];
+            int read;
+            while ((read = reader.read(array)) >= 0) {
+                writer.write(array, 0, read);
+            }
+            reader.close();
         }
-        reader.close();
     }
 
     private void print(PrintWriter writer, String httpMethod,

@@ -31,6 +31,7 @@ import org.jboss.resteasy.spi.ResteasyDeployment;
 import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.jboss.resteasy.spi.ValueInjector;
 import org.jboss.resteasy.spi.util.Types;
+import org.wildfly.graal.runtime.WildFlyGraalSetup;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -46,7 +47,7 @@ public class ContextParameterInjector implements ValueInjector {
     private Type genericType;
     private Annotation[] annotations;
     private volatile boolean outputStreamWasWritten = false;
-
+    private Object proxyInstance;
     static {
         constructor = AccessController.doPrivileged(new PrivilegedAction<Constructor<?>>() {
             @Override
@@ -70,6 +71,16 @@ public class ContextParameterInjector implements ValueInjector {
         this.proxy = proxy;
         this.factory = factory;
         this.annotations = annotations;
+        if (WildFlyGraalSetup.isBuildTime()) {
+            // Having a cache of proxy means that resteasy.proxy.implement.all.interfaces option is not supported with Graal
+            proxyInstance = getProxyFromCache(rawType);
+            if (proxyInstance == null) {
+                Class[] itfs = new Class[1];
+                itfs[0] = rawType;
+                proxyInstance = Proxy.newProxyInstance(rawType.getClassLoader(), itfs, new GenericDelegatingProxy());
+                addProxyToCache(rawType, proxyInstance);
+            }
+        }
     }
 
     @Override
@@ -176,6 +187,9 @@ public class ContextParameterInjector implements ValueInjector {
     }
 
     protected Object createProxy() {
+        if (proxyInstance != null) {
+            return proxyInstance;
+        }
         if (proxy != null) {
             try {
                 return proxy.getConstructors()[0].newInstance(new GenericDelegatingProxy());
@@ -208,7 +222,8 @@ public class ContextParameterInjector implements ValueInjector {
                     }
                 });
             }
-            return Proxy.newProxyInstance(clazzLoader, intfs, new GenericDelegatingProxy());
+            Object obj = Proxy.newProxyInstance(clazzLoader, intfs, new GenericDelegatingProxy());
+            return obj;
         }
     }
 
@@ -253,5 +268,23 @@ public class ContextParameterInjector implements ValueInjector {
 
     void setOutputStreamWasWritten(boolean outputStreamWasWritten) {
         this.outputStreamWasWritten = outputStreamWasWritten;
+    }
+
+    private static Object getProxyFromCache(Class<?> key) {
+        Map<Class<?>, Object> map = ResteasyContext.getContextDataMap();
+        WildFlyGraalSetup.GraalCache cache = (WildFlyGraalSetup.GraalCache) map.get(WildFlyGraalSetup.GraalCache.class);
+        Object value = null;
+        if (cache != null) {
+            value = cache.getProxy(key);
+        }
+        return value;
+    }
+
+    private static void addProxyToCache(Class<?> key, Object value) {
+        Map<Class<?>, Object> map = ResteasyContext.getContextDataMap();
+        WildFlyGraalSetup.GraalCache cache = (WildFlyGraalSetup.GraalCache) map.get(WildFlyGraalSetup.GraalCache.class);
+        if (cache != null) {
+            cache.addProxy(key, value);
+        }
     }
 }

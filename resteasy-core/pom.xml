@@ -89,6 +89,11 @@
             <artifactId>asyncutil</artifactId>
         </dependency>
 
+        <dependency>
+          <groupId>org.wildfly.graal</groupId>
+          <artifactId>wildfly-graal-runtime</artifactId>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>

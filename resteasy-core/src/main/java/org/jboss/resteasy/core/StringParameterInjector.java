@@ -43,6 +43,7 @@ import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.jboss.resteasy.spi.StringParameterUnmarshaller;
 import org.jboss.resteasy.spi.util.Types;
 import org.jboss.resteasy.util.StringToPrimitive;
+import org.wildfly.graal.runtime.WildFlyGraalSetup;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -707,6 +708,7 @@ public class StringParameterInjector {
         if (isArray) {
             if (values == null)
                 return null;
+            // I suspect that we will be not able to deal this Array. TO BE INVESTIGATED
             Object vals = Array.newInstance(type.getComponentType(), values.size());
             for (int i = 0; i < values.size(); i++)
                 Array.set(vals, i, extractValue(values.get(i)));
@@ -717,7 +719,7 @@ public class StringParameterInjector {
             @SuppressWarnings("rawtypes")
             Collection collection = null;
             try {
-                collection = collectionType.newInstance();
+                collection = WildFlyGraalSetup.newInstance(collectionType);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
