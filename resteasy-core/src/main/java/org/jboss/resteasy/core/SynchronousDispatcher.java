@@ -239,9 +239,7 @@ public class SynchronousDispatcher implements Dispatcher {
                 ResourceInvoker invoker = null;
                 try {
                     try {
-                        System.out.println(":INKVOK1");
                         invoker = getInvoker(request);
-                        System.out.println(":INKVOK1 " + invoker);
                     } catch (Exception exception) {
                         //logger.error("getInvoker() failed mapping exception", exception);
                         writeException(request, response, exception, t -> {
@@ -297,7 +295,6 @@ public class SynchronousDispatcher implements Dispatcher {
 
     public ResourceInvoker getInvoker(HttpRequest request)
             throws Failure {
-        System.out.println("GET INVOKER");
         LogMessages.LOGGER.pathInfo(request.getUri().getPath());
         if (!request.isInitial()) {
             throw new InternalServerErrorException(Messages.MESSAGES.isNotInitialRequest(request.getUri().getPath()));
@@ -306,7 +303,6 @@ public class SynchronousDispatcher implements Dispatcher {
         if (invoker == null) {
             throw new NotFoundException(Messages.MESSAGES.unableToFindJaxRsResource(request.getUri().getPath()));
         }
-        System.out.println("GET INVOKER " + invoker);
         RESTEasyTracingLogger logger = RESTEasyTracingLogger.getInstance(request);
         logger.log("MATCH_RESOURCE", invoker);
         logger.log("MATCH_RESOURCE_METHOD", invoker.getMethod());
@@ -340,7 +336,6 @@ public class SynchronousDispatcher implements Dispatcher {
         contextDataMap.putAll(defaultContextObjects);
         contextDataMap.put(Cleanables.class, new Cleanables());
         contextDataMap.put(PostResourceMethodInvokers.class, new PostResourceMethodInvokers());
-        System.out.println("OBJECT PUSED");
     }
 
     public Response internalInvocation(HttpRequest request, HttpResponse response, Object entity) {
@@ -352,10 +347,8 @@ public class SynchronousDispatcher implements Dispatcher {
             MessageBodyParameterInjector.pushBody(entity);
             pushedBody = true;
             ResourceInvoker invoker = getInvoker(request);
-            System.out.println("WE HAVE AN INVOKER " + invoker);
             if (invoker != null) {
                 pushContextObjects(request, response);
-                System.out.println("WILL EXECUTE");
                 return execute(request, response, invoker);
             }
 

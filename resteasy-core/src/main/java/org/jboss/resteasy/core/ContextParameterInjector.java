@@ -58,7 +58,6 @@ public class ContextParameterInjector implements ValueInjector {
                     Class<?> clazz = Class.forName("org.jboss.resteasy.core.ContextServletOutputStream");
                     return clazz.getDeclaredConstructor(ContextParameterInjector.class, OutputStream.class);
                 } catch (Exception e) {
-                    System.out.println("CONSTRUCTOR FOR jakarta.servlet.http.HttpServletResponse ERROR " + e);
                     return null;
                 }
             }
@@ -223,12 +222,7 @@ public class ContextParameterInjector implements ValueInjector {
                     }
                 });
             }
-            System.out.println("CREATE PROXY for " + delegate);
-            for (Class i : intfs) {
-                System.out.println("INTERFACE " + i);
-            }
             Object obj = Proxy.newProxyInstance(clazzLoader, intfs, new GenericDelegatingProxy());
-            System.out.println("INJECTED PROXY IS " + obj.getClass());
             return obj;
         }
     }

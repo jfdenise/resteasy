@@ -134,7 +134,6 @@ public class ResteasyDeploymentImpl implements ResteasyDeployment {
     }
 
     private void startInternal() {
-        System.out.println("INITERNAL INT!!!!!!!!!!");
         initializeFactory();
         initializeDispatcher();
         pushContext();
@@ -504,7 +503,6 @@ public class ResteasyDeploymentImpl implements ResteasyDeployment {
                 } catch (ClassNotFoundException e) {
                     throw new RuntimeException(e);
                 }
-                System.out.println("!!!!!!!!!!!! SCANNING CLASS ADDING TO REGISTRY " + resource);
                 registry.addPerRequestResource(clazz);
             }
         }
