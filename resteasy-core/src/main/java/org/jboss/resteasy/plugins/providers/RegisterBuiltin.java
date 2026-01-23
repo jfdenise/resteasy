@@ -94,7 +94,6 @@ public class RegisterBuiltin {
             try {
                 Class<?> clazz;
                 if (System.getSecurityManager() == null) {
-                    System.out.println("PROVIDER " + line);
                     clazz = Thread.currentThread().getContextClassLoader().loadClass(line);
                 } else {
                     clazz = AccessController.doPrivileged(new PrivilegedExceptionAction<Class<?>>() {

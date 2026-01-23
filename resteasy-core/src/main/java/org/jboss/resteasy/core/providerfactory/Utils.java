@@ -21,9 +21,9 @@ import org.jboss.resteasy.specimpl.VariantListBuilderImpl;
 import org.jboss.resteasy.spi.ConstructorInjector;
 import org.jboss.resteasy.spi.HttpRequest;
 import org.jboss.resteasy.spi.HttpResponse;
-import org.jboss.resteasy.spi.InstanceCreatorHolder;
 import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.jboss.resteasy.spi.util.PickConstructor;
+import org.wildfly.graal.runtime.WildFlyGraalSetup;
 
 @SuppressWarnings({ "rawtypes", "unchecked" })
 public final class Utils {
@@ -103,7 +103,7 @@ public final class Utils {
     }
 
     private static <T> ConstructorInjector createConstructorInjector(ResteasyProviderFactory rpf, Class<? extends T> clazz) {
-        Constructor[] constructors = InstanceCreatorHolder.getCreator().getConstructors(clazz);
+        Constructor[] constructors = WildFlyGraalSetup.getConstructors(clazz);
         Constructor<?> constructor = PickConstructor.pickSingletonConstructor(clazz, constructors);
         if (constructor == null) {
             throw new IllegalArgumentException(

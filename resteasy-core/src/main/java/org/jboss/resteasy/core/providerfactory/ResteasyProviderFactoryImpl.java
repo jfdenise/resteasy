@@ -92,7 +92,6 @@ import org.jboss.resteasy.spi.HeaderValueProcessor;
 import org.jboss.resteasy.spi.HttpRequest;
 import org.jboss.resteasy.spi.HttpResponse;
 import org.jboss.resteasy.spi.InjectorFactory;
-import org.jboss.resteasy.spi.InstanceCreatorHolder;
 import org.jboss.resteasy.spi.LinkHeader;
 import org.jboss.resteasy.spi.PriorityServiceLoader;
 import org.jboss.resteasy.spi.PropertyInjector;
@@ -112,6 +111,7 @@ import org.jboss.resteasy.tracing.RESTEasyTracingLogger;
 import org.jboss.resteasy.util.FeatureContextDelegate;
 import org.jboss.resteasy.util.snapshot.SnapshotMap;
 import org.jboss.resteasy.util.snapshot.SnapshotSet;
+import org.wildfly.graal.runtime.WildFlyGraalSetup;
 
 /**
  * @author <a href="mailto:bill@burkecentral.com">Bill Burke</a>
@@ -1310,7 +1310,7 @@ public class ResteasyProviderFactoryImpl extends ResteasyProviderFactory
      * @return instance of type T
      */
     public <T> T injectedInstance(Class<? extends T> clazz) {
-        Constructor[] constructors = InstanceCreatorHolder.getCreator().getConstructors(clazz);
+        Constructor[] constructors = WildFlyGraalSetup.getConstructors(clazz);
         Constructor<?> constructor = PickConstructor.pickSingletonConstructor(clazz, constructors);
         ConstructorInjector constructorInjector = getInjectorFactory().createConstructor(constructor, this);
         Object obj = constructorInjector.construct(false);

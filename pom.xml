@@ -139,6 +139,7 @@
         <version.org.wildfly.galleon-plugins>7.0.0.Final</version.org.wildfly.galleon-plugins>
         <version.org.wildfly.plugins.wildfly-maven-plugin>5.1.5.Final</version.org.wildfly.plugins.wildfly-maven-plugin>
         <version.org.wildfly.jar.plugin>11.0.2.Final</version.org.wildfly.jar.plugin>
+        <version.org.wildfly.graal>1.0-SNAPSHOT</version.org.wildfly.graal>
 
         <!-- Test options -->
         <additionalJvmArgs>-Djava.io.tmpdir=${project.build.directory}</additionalJvmArgs>
@@ -194,6 +195,11 @@
                 <groupId>org.wildfly.galleon-plugins</groupId>
                 <artifactId>wildfly-config-gen</artifactId>
                 <version>${version.org.wildfly.galleon-plugins}</version>
+            </dependency>
+            <dependency>
+              <groupId>org.wildfly.graal</groupId>
+              <artifactId>wildfly-graal-runtime</artifactId>
+              <version>${version.org.wildfly.graal}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
