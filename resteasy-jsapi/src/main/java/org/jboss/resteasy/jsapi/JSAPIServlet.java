@@ -17,6 +17,7 @@ import org.jboss.resteasy.jsapi.i18n.Messages;
 import org.jboss.resteasy.plugins.server.servlet.ResteasyContextParameters;
 import org.jboss.resteasy.spi.ResteasyDeployment;
 import org.jboss.resteasy.spi.ResteasyProviderFactory;
+import org.wildfly.graal.runtime.WildFlyGraalSetup;
 
 /**
  * @author <a href="mailto:stef@epardaud.fr">Stéphane Épardaud</a>
@@ -38,10 +39,15 @@ public class JSAPIServlet extends HttpServlet {
         if (LogMessages.LOGGER.isDebugEnabled())
             LogMessages.LOGGER.info(Messages.MESSAGES.loadingJSAPIServlet());
 
-        try {
-            scanResources();
-        } catch (Exception e) {
-            throw new ServletException(e);
+        WildFlyGraalSetup.GraalCache cache = WildFlyGraalSetup.getCache(config.getServletContext().getContextPath());
+        if (cache != null) {
+            services = (Map<String, ServiceRegistry>) cache.get("services");
+        } else {
+            try {
+                scanResources();
+            } catch (Exception e) {
+                throw new ServletException(e);
+            }
         }
 
         if (LogMessages.LOGGER.isDebugEnabled())
@@ -50,6 +56,10 @@ public class JSAPIServlet extends HttpServlet {
         // make it possible to get to us for rescanning
         ServletContext servletContext = config.getServletContext();
         servletContext.setAttribute(getClass().getName(), this);
+        if (WildFlyGraalSetup.isBuildTime()) {
+            cache = WildFlyGraalSetup.initCache(config.getServletContext().getContextPath());
+            cache.add("services", services);
+        }
     }
 
     @Override
