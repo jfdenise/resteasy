@@ -23,6 +23,7 @@ import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.jboss.resteasy.spi.util.Types;
 import org.jboss.resteasy.spi.validation.GeneralValidatorCDI;
 import org.jboss.resteasy.util.GetRestful;
+import org.wildfly.graal.runtime.WildFlyGraalSetup;
 
 /**
  * This implementation of InjectionTarget is a wrapper that allows JAX-RS
@@ -52,6 +53,9 @@ public class JaxrsInjectionTarget<T> implements InjectionTarget<T> {
         this.delegate = delegate;
         this.clazz = clazz;
         hasPostConstruct = Types.hasPostConstruct(clazz, validatePostConstructParameters);
+        if (WildFlyGraalSetup.isBuildTime()) {
+            propertyInjector = getPropertyInjector();
+        }
     }
 
     @Override
