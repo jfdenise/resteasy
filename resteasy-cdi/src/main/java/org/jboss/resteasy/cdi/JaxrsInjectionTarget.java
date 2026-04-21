@@ -39,6 +39,10 @@ public class JaxrsInjectionTarget<T> implements InjectionTarget<T> {
     private PropertyInjector propertyInjector;
 
     private final boolean hasPostConstruct;
+    // We do need to have it init at boot time due to validation.xml being a resource loaded.
+    // TODO See if we can in a generic way pre-load resources
+    // XXX CREMA NOT NEEDED
+    private GeneralValidatorCDI generalValidatorCDI;
 
     private static final Function<Method, Boolean> validatePostConstructParameters = (Method m) -> {
         if (m.getParameterCount() == 0)
@@ -53,8 +57,19 @@ public class JaxrsInjectionTarget<T> implements InjectionTarget<T> {
         this.delegate = delegate;
         this.clazz = clazz;
         hasPostConstruct = Types.hasPostConstruct(clazz, validatePostConstructParameters);
+        // That is to avoid lazy init at runtime.
+        // XXX CREMA NOT NEEDED
         if (WildFlyGraalSetup.isBuildTime()) {
             propertyInjector = getPropertyInjector();
+            if (GetRestful.isRootResource(clazz)) {
+                ResteasyProviderFactory providerFactory = ResteasyProviderFactory.getInstance();
+                ContextResolver<GeneralValidatorCDI> resolver = providerFactory.getContextResolver(GeneralValidatorCDI.class,
+                        MediaType.WILDCARD_TYPE);
+                if (resolver != null) {
+                    generalValidatorCDI = providerFactory.getContextResolver(GeneralValidatorCDI.class, MediaType.WILDCARD_TYPE)
+                            .getContext(null);
+                }
+            }
         }
     }
 
@@ -126,10 +141,14 @@ public class JaxrsInjectionTarget<T> implements InjectionTarget<T> {
             ResteasyProviderFactory providerFactory = ResteasyProviderFactory.getInstance();
             ContextResolver<GeneralValidatorCDI> resolver = providerFactory.getContextResolver(GeneralValidatorCDI.class,
                     MediaType.WILDCARD_TYPE);
-            GeneralValidatorCDI validator = null;
-            if (resolver != null) {
-                validator = providerFactory.getContextResolver(GeneralValidatorCDI.class, MediaType.WILDCARD_TYPE)
-                        .getContext(null);
+            // That is to avoid lazy init at runtime.
+            // XXX CREMA NOT NEEDED
+            GeneralValidatorCDI validator = generalValidatorCDI;
+            if (validator == null) {
+                if (resolver != null) {
+                    validator = providerFactory.getContextResolver(GeneralValidatorCDI.class, MediaType.WILDCARD_TYPE)
+                            .getContext(null);
+                }
             }
             if (validator != null && validator.isValidatableFromCDI(clazz)) {
                 validator.validate(request, instance);
